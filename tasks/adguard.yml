@@ -9,6 +9,7 @@
   ansible.builtin.set_fact:
     docker_file_dir: "{{ docker_working_dir }}/adguardhome"
     adguard_config_folder: "{{ docker_working_dir }}/conf"
+    adguard_frontend_pass: "{{ adguard_frontend_pass_input.user_input }}"
 
 - name: Create config directory.
   ansible.builtin.file:
