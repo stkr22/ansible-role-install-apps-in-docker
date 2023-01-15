@@ -24,6 +24,13 @@
     force: no
     mode: 0640
 
+- name: "Ensure {{ ansible_facts['user_id'] }} user is added to the docker group."
+  become: yes
+  ansible.builtin.user:
+    name: "{{ ansible_facts['user_id'] }}"
+    groups: docker
+    append: yes
+
 - name: Create adguard home container.
   community.docker.docker_container:
     name: adguard_home
