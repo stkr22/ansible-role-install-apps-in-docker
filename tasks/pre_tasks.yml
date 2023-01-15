@@ -29,6 +29,17 @@
     state: started
     enabled: yes
 
+- name: "Ensure {{ ansible_facts['user_id'] }} user is added to the docker group."
+  become: yes
+  ansible.builtin.user:
+    name: "{{ ansible_facts['user_id'] }}"
+    groups: docker
+    append: yes
+
+# reset_connection doesn't support conditionals.
+- name: Reset connection so docker group is picked up.
+  meta: reset_connection
+
 - name: Setting helper variables
   ansible.builtin.set_fact:
     docker_working_dir: "/home/{{ ansible_facts['user_id'] }}"
