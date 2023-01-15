@@ -1,0 +1,44 @@
+---
+- name: Requesting mqtt frontend password.
+  pause:
+    prompt: Enter password
+    echo: no
+  register: mqtt_frontend_pass_input
+
+- name: Setting helper variables.
+  ansible.builtin.set_fact:
+    docker_compose_file_dir: "{{ docker_working_dir }}/zigbee2mqtt"
+    mqtt_config_folder: "{{ docker_working_dir }}/zigbee2mqtt/zigbee2mqtt-data"
+    mqtt_backend_port: "8080"
+    mqtt_device_endpoint: "/dev/ttyACM0"
+    mqtt_frontend_url: "{{ ansible_facts['default_ipv4']['address'] }}"
+    mqtt_frontend_pass: "{{ mqtt_frontend_pass_input.user_input }}"
+    mqtt_container_tag: latest-dev
+
+- name: Create config directory.
+  ansible.builtin.file:
+    path: "{{ mqtt_config_folder }}"
+    state: directory
+    mode: 0750
+
+- name: Copy zigbee2mqtt config template into config directory.
+  ansible.builtin.template:
+    src: zigbee2mqtt_configuration.yaml.j2
+    dest: "{{ mqtt_config_folder }}/configuration.yaml"
+    force: no
+    mode: 0640
+
+- name: Copy zigbee2mqtt compose template into config directory.
+  ansible.builtin.template:
+    src: mqtt_assistant.yml.j2
+    dest: "{{ docker_compose_file_dir }}/docker-compose.yml"
+    mode: 0640
+  notify: docker compose restart
+
+- name: Restart docker compose
+  community.docker.docker_compose:
+    project_src: "{{ docker_compose_file_dir }}"
+  register: docker_compose_task
+
+- name: Flush handlers for immediate compose start.
+  meta: flush_handlers

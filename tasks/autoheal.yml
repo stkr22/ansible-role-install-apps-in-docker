@@ -1,0 +1,10 @@
+---
+- name: Create autoheal container.
+  community.docker.docker_container:
+    name: autoheal
+    image: willfarrell/autoheal
+    restart_policy: always
+    env:
+      AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

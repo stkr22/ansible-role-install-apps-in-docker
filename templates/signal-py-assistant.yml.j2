@@ -1,0 +1,57 @@
+version: "3"
+
+services:
+    db:
+        image: postgres:latest
+        container_name: pyassi_db
+        restart: unless-stopped
+        environment:
+            - POSTGRES_DB=postgres
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+        healthcheck:
+            test: ["CMD", "pg_isready", "--quiet", "-U", "$POSTGRES_USER", "$POSTGRES_DB"]
+            interval: 10s
+            timeout: 10s
+            retries: 3
+        ports: 
+            - 127.0.0.1:5432:5432
+        volumes: 
+            - db-data:/var/lib/postgresql/data
+
+    signalclirestapi:
+        image: bbernhard/signal-cli-rest-api:latest
+        restart: unless-stopped
+        container_name: pyassi_signal_backend
+        environment:
+            - MODE=json-rpc
+        ports:
+            - 127.0.0.1:{{ signal_assistant_backend_port }}:{{ signal_assistant_backend_port }}
+        volumes:
+            - {{ signal_keys_config_folder }}:/home/.local/share/signal-cli
+
+    backend:
+        image: registry.stkdata.de/stkstandard/signal-py-assistant:latest
+        container_name: pyassi_backend
+        restart: unless-stopped
+        network_mode: host
+        depends_on:
+            - db
+            - signalclirestapi
+        environment:
+            - POSTGRES_SERVER=db
+            - POSTGRES_DB=postgres
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+            - SIGNAL_PHONE_NUMBER={{ signal_assistant_sender_phonenumber }}
+            - SIGNAL_INTERFACE_HOST=http://localhost
+            - SIGNAL_INTERFACE_PORT={{ signal_assistant_backend_port }}
+            - ADMIN_PHONE_NUMBER={{ signal_assistant_admin_phonenumber }}
+            - ROUTER_DEVICE_IP=192.168.178.1
+            - ROUTER_DEVICE_IP=192.168.178.1
+            - ROUTER_USER_NAME={{ router_user_name }}
+            - ROUTER_USER_PW={{ router_user_pw }}
+
+volumes:
+    db-data:
+    signalkeys:

@@ -1,0 +1,67 @@
+---
+- name: Verify that required string variables are defined
+  ansible.builtin.assert:
+    that: 
+      - "{{ req_var }} is defined"
+      - "{{ req_var }} | length > 0"
+      - "{{ req_var }} != None"
+    fail_msg: "{{ req_var }} needs to be set for the role to work"
+    success_msg: "Required variable {{ req_var }} is defined"
+  loop:
+    - gitlab_instance_url
+  loop_control:
+    loop_var: req_var
+
+- name: Request admin registration token.
+  pause:
+    prompt: Enter registration token
+    echo: no
+  register: gitlab_runner_registration_token
+
+- name: Setting helper variables.
+  ansible.builtin.set_fact:
+    docker_compose_file_dir: "{{ docker_working_dir }}/gitlabrunner"
+    docker_container_name: gitlabrunner
+    gitlabrunner_config_dir: "{{ docker_working_dir }}/gitlabrunner/config"
+    gitlab_instance_api_url: "{{ gitlab_instance_url }}/api/v4/runners"
+
+- name: Create config directory.
+  ansible.builtin.file:
+    path: "{{ gitlabrunner_config_dir }}"
+    state: directory
+    mode: 0755
+
+- name: Register runner
+  ansible.builtin.uri:
+    url: "{{ gitlab_instance_api_url }}"
+    method: "POST"
+    body_format: form-urlencoded
+    body:
+      - [ token, "{{ gitlab_runner_registration_token.user_input }}"]
+      - [ description, "{{ inventory_hostname }} Runner" ]
+      - [ tag_list, "docker_{{ ansible_facts['architecture'] }}" ]
+      - [ run_untagged, false ]
+      - [ locked, false ]
+    status_code: 201
+  register: gitlab_api_runner_registration
+
+- name: Extract token from gitlab API response.
+  set_fact:
+    gitlab_runner_token="{{ gitlab_api_runner_registration.json | json_query('token') }}"
+
+- name: create gitlab-runner configuration file
+  template:
+    src: config.toml.j2
+    dest: "{{ gitlabrunner_config_dir }}/config.toml"
+    mode: '0600'
+
+- name: Configure and start gitlabrunner docker container.
+  community.docker.docker_container:
+    name: "{{ docker_container_name }}"
+    image: gitlab/gitlab-runner:alpine
+    restart_policy: always
+    env:
+      TZ=Europe/Berlin
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "{{ gitlabrunner_config_dir }}:/etc/gitlab-runner"

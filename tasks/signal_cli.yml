@@ -1,0 +1,65 @@
+---
+- name: Verify that required string variables are defined.
+  ansible.builtin.assert:
+    that:
+      - "{{ req_var }} is defined"
+      - "{{ req_var }} | length > 0"
+      - "{{ req_var }} != None"
+    fail_msg: "{{ req_var }} needs to be set for the role to work"
+    success_msg: "Required variable {{ req_var }} is defined"
+  loop:
+    - signal_assistant_sender_phonenumber
+  loop_control:
+    loop_var: req_var
+
+- name: Setting helper variables.
+  ansible.builtin.set_fact:
+    signal_compose_config_folder: "{{ docker_working_dir }}/signal_cli"
+    signal_keys_config_folder: "{{ docker_working_dir }}/signal_cli/signalkeys"
+    signal_assistant_backend_port: "8080"
+
+- name: Requesting signal registration token.
+  pause:
+    prompt: Enter registration token
+    echo: no
+  register: signal_register_token
+
+- name: Create config directory.
+  ansible.builtin.file:
+    path: "{{ signal_keys_config_folder }}"
+    state: directory
+    mode: 0700
+
+- name: Create signal credential container container.
+  community.docker.docker_container:
+    name: signal_cli
+    image: bbernhard/signal-cli-rest-api:latest
+    restart_policy: unless-stopped
+    env:
+      MODE=normal
+    ports:
+        - 127.0.0.1:{{ signal_assistant_backend_port }}:{{ signal_assistant_backend_port }}
+    volumes:
+      - "{{ signal_keys_config_folder }}:/home/.local/share/signal-cli"
+
+- name: Register new number.
+  ansible.builtin.uri:
+    url: "http://localhost:{{ signal_assistant_backend_port }}/v1/register/{{ signal_assistant_sender_phonenumber }}"
+    method: "POST"
+    body_format: json
+    body:
+      captcha: "{{ signal_register_token.user_input }}"
+      use_voice: false
+    status_code: 201
+
+- name: Verifying number with signal network.
+  pause:
+    prompt: Enter verify token
+    echo: no
+  register: signal_network_token
+
+- name: Verify new number with signal api.
+  ansible.builtin.uri:
+    url: "http://localhost:{{ signal_assistant_backend_port }}/v1/register/{{ signal_assistant_sender_phonenumber }}/verify/{{ signal_network_token.user_input }}"
+    method: "POST"
+    status_code: 201

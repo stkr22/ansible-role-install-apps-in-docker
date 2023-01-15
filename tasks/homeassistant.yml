@@ -1,0 +1,23 @@
+---
+- name: Setting helper variables.
+  ansible.builtin.set_fact:
+    ha_compose_folder: "{{ docker_working_dir }}/homeassistant"
+    ha_config_folder: "{{ docker_working_dir }}/homeassistant/config"
+
+- name: Install basic packages.
+  become: yes
+  ansible.builtin.apt:
+    name: libseccomp2
+    state: present
+
+- name: Create Homeassistant container.
+  community.docker.docker_container:
+    name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    restart_policy: unless-stopped
+    privileged: yes
+    network_mode: host
+    env:
+      TZ=Europe/Berlin
+    volumes:
+      - "{{ ha_config_folder }}:/config"

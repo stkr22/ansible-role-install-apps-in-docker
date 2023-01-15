@@ -1,0 +1,27 @@
+homeassistant: true
+
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mqtt
+
+serial:
+  port: {{ mqtt_device_endpoint }}
+
+frontend:
+  port: {{ mqtt_backend_port }}
+  auth_token: "{{ mqtt_frontend_pass }}"
+  url: "http://{{ mqtt_frontend_url }}:{{ mqtt_backend_port }}"
+
+advanced:
+  channel: 11
+  network_key: GENERATE
+  homeassistant_discovery_topic: 'homeassistant'
+  homeassistant_status_topic: 'homeassistant/status'
+  homeassistant_legacy_entity_attributes: false
+  homeassistant_legacy_triggers: false
+
+availability:
+  active:
+    timeout: 15
+  passive:
+    timeout: 1500

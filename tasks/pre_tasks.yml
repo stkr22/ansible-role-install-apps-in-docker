@@ -1,0 +1,34 @@
+---
+- name: Ensure dependencies are installed (Debian).
+  become: yes
+  ansible.builtin.apt:
+    name:
+      - libffi-dev
+      - libssl-dev
+      - python3-dev
+      - python3-pip
+      - git
+      - rsync
+    state: present
+  when: 
+    - ansible_facts.os_family == "Debian"
+    - "'zigbee2mqtt' in docker_services_installs or 'pigallery2' in docker_services_installs"
+
+- name: Install Docker Compose using Pip.
+  ansible.builtin.pip:
+    name: docker-compose
+    state: present
+    executable: pip3
+  when:
+    - "'zigbee2mqtt' in docker_services_installs or 'pigallery2' in docker_services_installs"
+
+- name: Ensure Docker is started.
+  become: yes
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Setting helper variables
+  ansible.builtin.set_fact:
+    docker_working_dir: "/home/{{ ansible_facts['user_id'] }}"

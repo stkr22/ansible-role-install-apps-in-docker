@@ -1,0 +1,34 @@
+---
+# pre task
+- name: Executing defined pre tasks.
+  ansible.builtin.import_tasks: pre_tasks.yml
+
+# main tasks
+
+- name: Installing Adguard service.
+  ansible.builtin.import_tasks: adguard.yml
+  when: "'adguard' in docker_services_installs"
+
+- name: Installing Autoheal.
+  ansible.builtin.import_tasks: autoheal.yml
+  when: "'autoheal' in docker_services_installs"
+
+- name: Installing Gitlab Runner.
+  ansible.builtin.import_tasks: gitlab-runner.yml
+  when: "'gitlab-runner' in docker_services_installs"
+
+- name: Installing Signal CLI service.
+  ansible.builtin.import_tasks: signal_cli.yml
+  when: "'signal-cli' in docker_services_installs"
+
+- name: Installing Zigbee2MQTT service.
+  ansible.builtin.import_tasks: zigbee2mqtt.yml
+  when: "'zigbee2mqtt' in docker_services_installs"
+
+- name: Installing Homeassistant service.
+  ansible.builtin.import_tasks: homeassistant.yml
+  when: "'homeassistant' in docker_services_installs"
+
+- name: Installing Pigallery2 service.
+  ansible.builtin.import_tasks: pigallery2.yml
+  when: "'pigallery2' in docker_services_installs"

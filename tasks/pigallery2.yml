@@ -1,0 +1,53 @@
+---
+- name: Requesting image folder path.
+  ansible.builtin.pause:
+    prompt: Enter image folder path
+  register: pigallery2_app_images_folder_request
+
+- name: Checking if path is valid.
+  ansible.builtin.stat:
+    path: "{{ pigallery2_app_images_folder_request.user_input }}"
+  register: path_checking
+
+- name: Checking if folder exists on host.
+  ansible.builtin.assert:
+    that:
+      - path_checking.stat.exists
+    fail_msg: "Path {{ pigallery2_app_images_folder_request.user_input }} is invalid."
+    success_msg: "Path {{ pigallery2_app_images_folder_request.user_input }} is valid."
+
+- name: Setting helper variables.
+  ansible.builtin.set_fact:
+    docker_compose_file_dir: "{{ docker_working_dir }}/pigallery2"
+    pigallery2_app_config_folder: "{{ docker_working_dir }}/pigallery2/app-data"
+    pigallery2_app_images_folder: "{{ pigallery2_app_images_folder_request.user_input }}"
+    pigallery2_nginx_port: "80"
+    pigallery2_nginx_config_folder: "{{ docker_working_dir }}/pigallery2/nginx-data"
+
+- name: Create config directory.
+  ansible.builtin.file:
+    path: "{{ pigallery2_nginx_config_folder }}"
+    state: directory
+    mode: 0750
+
+- name: Copy pigallery2 config template into config directory.
+  ansible.builtin.template:
+    src: pigallery2/docker-compose.yml.j2
+    dest: "{{ docker_compose_file_dir }}/docker-compose.yaml"
+    force: no
+    mode: 0640
+
+- name: Copy pigallery2 compose template into config directory.
+  ansible.builtin.template:
+    src: pigallery2/nginx.conf.j2
+    dest: "{{ pigallery2_nginx_config_folder }}/nginx.conf"
+    mode: 0640
+  notify: docker compose restart
+
+- name: Restart docker compose
+  community.docker.docker_compose:
+    project_src: "{{ docker_compose_file_dir }}"
+  register: docker_compose_task
+
+- name: Flush handlers for immediate compose start.
+  meta: flush_handlers
